@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanktoerisme Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .slider { -webkit-appearance: none; width: 100%; height: 15px; border-radius: 5px; background: #d1d5db; outline: none; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #2563eb; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow: hidden; }
+    </style>
+</head>
+<body class="bg-gray-50 p-4 md:p-8 font-sans">
+
+    <div class="max-w-xl mx-auto bg-white p-8 rounded-3xl shadow-xl border border-gray-100 relative">
+        <button onclick="toggleModal()" class="absolute top-8 right-8 text-gray-400 hover:text-blue-600 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+        </button>
+
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black text-gray-900 tracking-tight">Tanktoerisme <span class="text-blue-600">Calculator</span></h1>
+        </div>
+        
+        <div class="space-y-6 mb-8">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="relative">
+                    <label class="block text-[10px] font-black text-blue-600 uppercase mb-1 ml-1 text-center">Start Postcode (NL)</label>
+                    <input type="text" id="start" placeholder="1234 AB" maxlength="7" oninput="formatPostcode(this)" class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none transition-all font-mono text-xl text-center">
+                </div>
+                <div class="relative">
+                    <label class="block text-[10px] font-black text-blue-600 uppercase mb-1 ml-1 text-center">Grens Postcode (BE/DE)</label>
+                    <input type="text" id="end" placeholder="2000" maxlength="7" oninput="formatPostcode(this)" class="w-full p-4 bg-gray-50 border-2 border-transparent focus:border-blue-500 rounded-2xl outline-none transition-all font-mono text-xl text-center">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-gray-50 p-3 rounded-2xl text-center">
+                    <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Verbruik 1 op:</label>
+                    <input type="number" id="verbruik" value="15" oninput="updateCalculaties()" class="w-full bg-transparent font-bold text-lg outline-none text-center">
+                </div>
+                <div class="bg-gray-50 p-3 rounded-2xl text-center">
+                    <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Prijs NL (€)</label>
+                    <input type="number" id="prijsDuur" step="0.01" value="2.40" oninput="updateCalculaties()" class="w-full bg-transparent font-bold text-lg outline-none text-center">
+                </div>
+                <div class="bg-gray-50 p-3 rounded-2xl text-center">
+                    <label class="block text-[9px] font-bold text-gray-400 uppercase mb-1">Prijs BE/DE (€)</label>
+                    <input type="number" id="prijsGoedkoop" step="0.01" value="1.74" oninput="updateCalculaties()" class="w-full bg-transparent font-bold text-lg outline-none text-center">
+                </div>
+            </div>
+        </div>
+
+        <button onclick="berekenAfstand()" id="btn" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-lg hover:bg-blue-700 transition-all transform active:scale-[0.98] shadow-lg shadow-blue-200">
+            BEREKEN BESPARING
+        </button>
+
+        <div id="resultaat" class="mt-10 hidden border-t-2 border-dashed border-gray-100 pt-8">
+            <div class="grid grid-cols-2 gap-4 mb-8 text-center">
+                <div class="bg-gray-50 p-4 rounded-2xl">
+                    <p class="text-[10px] text-gray-400 font-bold uppercase mb-1">Afstand (Retour)</p>
+                    <p class="text-2xl font-black text-gray-800"><span id="afstandText">0</span> <span class="text-sm font-normal text-gray-400">km</span></p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-2xl border border-blue-100">
+                    <p class="text-[10px] text-blue-400 font-bold uppercase mb-1">Break-even bij</p>
+                    <p class="text-2xl font-black text-blue-700"><span id="bePoint">0</span> <span class="text-sm font-normal text-blue-400">L</span></p>
+                </div>
+            </div>
+
+            <div class="mb-10 px-2">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="text-sm font-black text-gray-700 uppercase">Ik ga tanken:</span>
+                    <span class="bg-blue-600 text-white px-4 py-1 rounded-full font-black text-lg"><span id="sliderValue">60</span> L</span>
+                </div>
+                <input type="range" id="literSlider" min="1" max="240" value="60" class="slider">
+            </div>
+
+            <div id="winstBox" class="text-center p-10 rounded-3xl transition-all duration-500 shadow-xl mb-6">
+                <p class="text-xs uppercase font-black tracking-tighter opacity-70 mb-1" id="winstLabel">Resultaat</p>
+                <p class="text-5xl font-black tracking-tight">€ <span id="winstBedrag">0.00</span></p>
+            </div>
+        </div>
+
+        <div class="flex justify-center mt-6 pt-4 border-t border-gray-50">
+            <a href="https://www.linkedin.com/in/tom-de-wilde-89b8432a?utm_source=share_via&utm_content=profile&utm_medium=member_android" target="_blank" class="flex items-center text-gray-400 hover:text-blue-600 transition-colors text-xs font-bold uppercase tracking-widest">
+                <svg class="w-4 h-4 mr-2 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                Contact op LinkedIn
+            </a>
+        </div>
+    </div>
+
+    <div id="infoModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50" onclick="toggleModal()"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded-3xl shadow-2xl z-50 overflow-y-auto max-h-[90vh]">
+            <div class="modal-content py-6 text-left px-6">
+                <div class="flex justify-between items-center pb-3 border-b mb-4">
+                    <p class="text-2xl font-black text-blue-600">Hoe berekenen we dit?</p>
+                    <div class="modal-close cursor-pointer z-50" onclick="toggleModal()">
+                        <svg class="fill-current text-black" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><path d="M14.53 4.53l-1.06-1.06L9 7.94 4.53 3.47 3.47 4.53 7.94 9l-4.47 4.47 1.06 1.06L9 10.06l4.47 4.47 1.06-1.06L10.06 9z"></path></svg>
+                    </div>
+                </div>
+                <div class="space-y-4 text-sm text-gray-600 leading-relaxed">
+                    <p>Onze berekening gaat verder dan alleen de literprijs. We houden rekening met:</p>
+                    <ul class="list-disc ml-5 space-y-1">
+                        <li><strong>Extra kilometers:</strong> De brandstof die je verbruikt om de grens over te steken.</li>
+                        <li><strong>Slijtage:</strong> Indirecte kosten door afschrijving van je auto.</li>
+                        <li><strong>Milieu & Tijd:</strong> De impact van extra uitstoot en de tijd die je investeert in je rit.</li>
+                    </ul>
+                    <section class="bg-blue-50 p-4 rounded-2xl border border-blue-100 italic mt-4 text-gray-800">
+                        "Het break-even punt toont aan hoeveel liter je moet tanken om de directe en indirecte kosten te compenseren."
+                    </section>
+                </div>
+                <div class="flex justify-end pt-6">
+                    <button onclick="toggleModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors">Snap ik!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const orsApiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImJlNDc2YzI3YWVhMjQ1ZTU4ZjUxZTRhYmU2N2JiYTEzIiwiaCI6Im11cm11cjY0In0='; 
+        let berekendeAfstand = 0;
+
+        function toggleModal() {
+            const m = document.getElementById('infoModal');
+            m.classList.toggle('opacity-0');
+            m.classList.toggle('pointer-events-none');
+            document.body.classList.toggle('modal-active');
+        }
+
+        function formatPostcode(el) {
+            let v = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (v.length <= 4) v = v.replace(/[^0-9]/g, '');
+            el.value = v;
+        }
+
+        [document.getElementById('start'), document.getElementById('end')].forEach(input => {
+            input.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); berekenAfstand(); } });
+        });
+
+        async function getCoords(q) {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&postalcode=${encodeURIComponent(q.replace(/\s+/g,''))}&countrycodes=nl,be,de&limit=1`;
+            try {
+                const r = await fetch(url);
+                const d = await r.json();
+                if (!d || d.length === 0) {
+                    const fbr = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&countrycodes=nl,be,de`);
+                    const fbd = await fbr.json();
+                    if (!fbd || fbd.length === 0) throw new Error();
+                    return [parseFloat(fbd[0].lon), parseFloat(fbd[0].lat)];
+                }
+                return [parseFloat(d[0].lon), parseFloat(d[0].lat)];
+            } catch (e) { throw new Error(`Postcode ${q} niet gevonden.`); }
+        }
+
+        async function berekenAfstand() {
+            const btn = document.getElementById('btn');
+            const s = document.getElementById('start').value;
+            const e = document.getElementById('end').value;
+
+            if (!/^[0-9]{4}/.test(s) || !/^[0-9]{4}/.test(e)) {
+                alert("Beide postcodes moeten starten met 4 cijfers.");
+                return;
+            }
+
+            btn.innerText = "ROUTE ZOEKEN...";
+            btn.disabled = true;
+
+            try {
+                const sc = await getCoords(s);
+                const ec = await getCoords(e);
+                const r = await fetch('https://api.openrouteservice.org/v2/directions/driving-car', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json; charset=utf-8',
+                        'Authorization': orsApiKey,
+                        'Accept': 'application/json, application/geo+json'
+                    },
+                    body: JSON.stringify({ "coordinates": [sc, ec], "units": "km" })
+                });
+
+                if (!r.ok) throw new Error("API Fout");
+                const data = await r.json();
+                const afstandEnkel = data.routes[0].summary.distance;
+                berekendeAfstand = Math.round((afstandEnkel * 2) * 10) / 10;
+
+                document.getElementById('resultaat').classList.remove('hidden');
+                window.isInitialSet = true;
+                updateCalculaties();
+            } catch (err) {
+                alert("Fout: " + err.message);
+            } finally {
+                btn.innerText = "BEREKEN BESPARING";
+                btn.disabled = false;
+            }
+        }
+
+        function updateCalculaties() {
+            const verbruik = parseFloat(document.getElementById('verbruik').value) || 15;
+            const pDuur = parseFloat(document.getElementById('prijsDuur').value) || 2.40;
+            const pGoed = parseFloat(document.getElementById('prijsGoedkoop').value) || 1.74;
+            const liter = parseFloat(document.getElementById('literSlider').value);
+            
+            const kostenRit = (berekendeAfstand / verbruik) * pDuur;
+            const besparingPerLiter = pDuur - pGoed;
+            const breakEven = besparingPerLiter > 0 ? (kostenRit / besparingPerLiter) : 0;
+
+            document.getElementById('bePoint').innerText = breakEven.toFixed(1);
+            document.getElementById('afstandText').innerText = berekendeAfstand.toFixed(1);
+            document.getElementById('sliderValue').innerText = liter;
+
+            if(window.isInitialSet) {
+                document.getElementById('literSlider').value = Math.ceil(breakEven + 5);
+                window.isInitialSet = false;
+                updateCalculaties();
+                return;
+            }
+
+            const winst = (liter * besparingPerLiter) - kostenRit;
+            const winstBox = document.getElementById('winstBox');
+            const winstBedrag = document.getElementById('winstBedrag');
+            const winstLabel = document.getElementById('winstLabel');
+
+            winstBedrag.innerText = winst.toFixed(2);
+            
+            if (winst > 0) {
+                winstBox.className = "text-center p-10 rounded-3xl bg-green-500 text-white shadow-xl shadow-green-100 mb-6";
+                winstLabel.innerText = "Jouw winst";
+            } else {
+                winstBox.className = "text-center p-10 rounded-3xl bg-red-500 text-white shadow-xl shadow-red-100 mb-6";
+                winstLabel.innerText = "Jouw verlies";
+            }
+        }
+
+        document.getElementById('literSlider').oninput = updateCalculaties;
+    </script>
+</body>
+</html>
